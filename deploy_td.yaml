@@ -1,0 +1,10 @@
+---
+- hosts: aws
+  tasks: 
+  - name: Install Pre-Requisites and Threat Dragon
+    yum: name=nodejs,npm,git enablerepo=epel state=latest
+    - shell: npm install npm -g
+    - shell: git init
+    - shell: git clone https://github.com/mike-goodwin/owasp-threat-dragon.git
+    - shell: npm install chdir=/home/ec2-user/owasp-threat-dragon/
+    - shell: npm start & chdir=/home/ec2-user/owasp-threat-dragon/
