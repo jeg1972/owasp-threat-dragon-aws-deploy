@@ -1,0 +1,224 @@
+{
+"AWSTemplateFormatVersion" : "2010-09-09",
+"Description" : "OWASP THREAT DRAGON: All Threat Dragon Infrastructure; VPC, Subnet, Routing and EC2 Instance.",
+
+	"Metadata" :
+	{
+	},
+
+	"Parameters" :
+  {
+    
+   		"VPCCIDRBlock" :
+      {
+        "Type" : "String",
+        "Default" : "10.181.208.0/22",
+        "Description" : "This main CIDR block allocated to the VPC."
+      },
+      
+   		"SubnetCIDRBlock" :
+      {
+        "Type" : "String",
+        "Default" : "10.181.208.0/27",
+        "Description" : "This subnet CIDR block allocated to the VPC."
+      },
+
+   		"AccessIP" :
+      {
+        "Type" : "String",
+        "Default" : "127.0.0.1/32",
+        "Description" : "Only allow SSH access from specifed IP Address."
+      },
+      
+   		"AvailabilityZone" :
+      {
+        "Type" : "String",
+        "Default" : "eu-west-1a",
+        "Description" : "This AZ allocated to the subnet."
+      },
+      
+		  "WebServerPort" :
+		  {
+		    "Type" : "String",
+		    "Default" : "3000",
+		    "Description" : "This is the port number that is available externally and which Threat Dragon will accept traffic on."
+		  },
+	
+		  "SSHPort" :
+      {
+        "Type" : "String",
+        "Default" : "22",
+        "Description" : "This is the port number that SSH access is available on."
+      },
+      
+  		"AMIID" :
+      {
+        "Type" : "String",
+        "Default" : "ami-c39604b0",
+        "Description" : "AMI image to be used."
+      },
+      
+   		"InstanceClass" :
+      {
+        "Type" : "String",
+        "Default" : "t2.micro",
+        "Description" : "Instance Class to be used."
+      },
+
+   		"SSHKey" :
+      {
+        "Type" : "String",
+        "Default" : "default_key_name",
+        "Description" : "Key for SSH Access."
+      }
+  },
+	
+	"Mappings" :
+	{
+	},
+
+	"Conditions" :
+	{
+	},
+
+	"Resources" :
+	{
+      "ThreatDragonVPC" :
+  		{
+      		"Type" : "AWS::EC2::VPC",
+      		"Properties" :
+      		{
+        			"CidrBlock" : {"Ref" : "VPCCIDRBlock"},
+        			"Tags" :
+					[
+						{"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} },
+						{"Key" : "Name", "Value" : "Threat Dragon VPC"}
+					]
+      		}
+   		},
+
+    	"ThreatDragonPublicSubnet" :
+		  {
+      		"Type" : "AWS::EC2::Subnet",
+      		"Properties" :
+			{
+        			"VpcId" : { "Ref" : "ThreatDragonVPC" },
+        			"CidrBlock" : {"Ref" : "SubnetCIDRBlock"},
+					    "AvailabilityZone" : {"Ref" : "AvailabilityZone"},
+        			"Tags" :
+					[
+						{"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} },
+						{"Key" : "Name", "Value" : "Threat Dragon Public Subnet"}
+					]
+      	}
+    	},
+
+	    "ThreatDragonRouteTable" :
+		  {
+				"Type" : "AWS::EC2::RouteTable",
+				"Properties" :
+				{
+	        			"VpcId" : {"Ref" : "ThreatDragonVPC"},
+	        			"Tags" :
+						[
+							{"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} },
+							{"Key" : "Name", "Value" : "Threat Dragon Public Routing Table"}
+						]
+				}
+	    },
+
+	    "ThreatDragonPublicSubnetRouteTableAssociation" :
+		  {
+				"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+	      		"Properties" :
+				{
+	        			"SubnetId" : { "Ref" : "ThreatDragonPublicSubnet" },
+	        			"RouteTableId" : { "Ref" : "ThreatDragonRouteTable" }
+	      }
+	    },
+	    
+	    "ThreatDragonInternetGateway" :
+		  {
+	      		"Type" : "AWS::EC2::InternetGateway",
+	      		"Properties" :
+				{
+	        			"Tags" :
+						[
+							{"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} },
+							{"Key" : "Name", "Value" : "Threat Dragon Internet Gateway"}
+						]
+	      }
+	    },
+
+	    "ThreatDragonAttachGateway" :
+		  {
+				"Type" : "AWS::EC2::VPCGatewayAttachment",
+				"Properties" :
+				{
+					"VpcId" : { "Ref" : "ThreatDragonVPC" },
+	        "InternetGatewayId" : { "Ref" : "ThreatDragonInternetGateway" }
+	      }
+	    },
+	    
+	    "ThreatDragonAddInternetGatewayRoute" :
+      {
+        "Type" : "AWS::EC2::Route",
+        "Properties" :
+        {
+          "DestinationCidrBlock" : "0.0.0.0/0",
+          "GatewayId" : { "Ref" : "ThreatDragonInternetGateway" },
+          "RouteTableId" :  { "Ref" : "ThreatDragonRouteTable" }
+        }
+      },
+      
+      "ThreatDragonSecurityGroup" :
+      {
+        "Type" : "AWS::EC2::SecurityGroup",
+	      "DependsOn" : "ThreatDragonVPC",
+        "Properties" :
+        {
+          "GroupDescription" : "Threat Dragon Ingress Security Group - Adds port 3000 and 22 Ingress",
+	        "VpcId" : {"Ref" : "ThreatDragonVPC"},
+          "SecurityGroupIngress" : [
+            {
+            "IpProtocol" : "tcp",
+            "FromPort" : { "Ref" : "SSHPort" },
+            "ToPort" : { "Ref" : "SSHPort" },
+            "CidrIp" : { "Ref" : "AccessIP" }
+            },
+            {
+            "IpProtocol" : "tcp",
+            "FromPort" : { "Ref" : "WebServerPort" },
+            "ToPort" : { "Ref" : "WebServerPort" },
+	          "CidrIp" : "0.0.0.0/0"
+            }
+            ]
+        }
+      },
+      
+      "ThreatDragonEC2Instance" :
+      {
+        "Type" : "AWS::EC2::Instance",
+        "Properties" :
+        {
+          "ImageId" : { "Ref" : "AMIID" },
+          "InstanceType" : { "Ref" : "InstanceClass" },
+          "KeyName" : { "Ref" : "SSHKey" },
+          "Tags" : [ { "Key" : "Name", "Value" : "oawspthreatdragon" }],
+          "NetworkInterfaces":
+          [ {
+            "AssociatePublicIpAddress": "true",
+            "DeviceIndex": "0",
+            "GroupSet" : [ { "Ref" : "ThreatDragonSecurityGroup" } ],
+            "SubnetId" : { "Ref" : "ThreatDragonPublicSubnet" }
+          } ]
+        }
+      }
+	    
+	},
+
+	"Outputs" :
+	{
+ 
+	}
+}
