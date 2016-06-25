@@ -27,6 +27,7 @@ OWASP Threat Dragon is an online threat modelling application which is based [he
 > 52.48.40.235
 
 4) Change directory to the location of the **deploy_td.yaml** file.
+
 5) Run;
 > ansible-playbook deploy_td.yaml --inventory-file=/etc/ansible/hosts -u ec2-user --key-file=aws_key.pem --sudo
 
