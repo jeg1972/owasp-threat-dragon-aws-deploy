@@ -22,8 +22,8 @@ OWASP Threat Dragon is an online threat modelling application which is based [he
 
 2) Once the infrastructure is set up and the instance is running, you can run the Ansible script to install Threat Dragon.  For this, you will need to obtain the Public IP address of the EC2 instance.
 
-3) Store the Public IP address of the EC2 Instance in **/etc/ansible/hosts** as shown below;
-> [aws]
+3) Store the Public IP address of the EC2 Instance in **/etc/ansible/hosts** as shown below (your IP address will be different);
+> [aws]  
 > 52.48.40.235
 
 4) Change directory to the location of the **deploy_td.yaml** file.
